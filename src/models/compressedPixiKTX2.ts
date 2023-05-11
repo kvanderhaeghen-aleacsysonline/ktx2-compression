@@ -27,7 +27,7 @@ export class CompressedPixiKTX2 {
         }
     }
 
-    public async create(type?: KTX2Types): Promise<void> {
+    public async create(count: number, type?: KTX2Types): Promise<void> {
         let filename = '';
         if (!this.isBasis && type) {
             filename = Constants.MODEL_KTX2_LIST[type];
@@ -36,24 +36,26 @@ export class CompressedPixiKTX2 {
             filename = Constants.MODEL_BASIS;
         }
         console.log('Pixi - Loading compressed texture:', filename);
-
         const texture = (await Assets.load(filename)) as Pixi.Texture;
-        console.error(texture);
 
+        for(let i = 0; i < count; i++) {
         // Create a sprite using the texture
-        const sprite = new Pixi.Sprite(texture);
+            const sprite = new Pixi.Sprite(texture);
 
-        const xPos = this.app.view.width / 2;
-        const yPos = this.app.view.height / 2;
-        sprite.position.set(xPos, yPos);
-        sprite.anchor.set(0.5, 0.5);
-        sprite.scale.set(0.5, 0.5);
+            const xPos = this.app.view.width / 2;
+            const yPos = this.app.view.height / 2;
+            const xRnd = Math.random() * 1000 - 500;
+            const yRnd = Math.random() * 600 - 300;
+            sprite.position.set(xPos - xRnd, yPos - yRnd);
+            sprite.anchor.set(0.5, 0.5);
+            sprite.scale.set(0.05, 0.05);
 
-        this.stage.addChild(sprite);
-        this.sprites.push(sprite);
-        this.speeds.push(Constants.ROTATION_SPEED[0]);
-        console.error(this.speeds);
-        console.error(this.sprites);
+            this.stage.addChild(sprite);
+            this.sprites.push(sprite);
+            this.speeds.push(Constants.ROTATION_SPEED[0]);
+            console.error(this.speeds);
+            console.error(this.sprites);
+        }
     }
 
     public reset(): void {
@@ -68,9 +70,13 @@ export class CompressedPixiKTX2 {
 
     public update(): void {
         let count = 0;
-        this.sprites.forEach((sprite) => {
-            sprite.rotation += this.speeds[count];
-            count++;
-        });
+        if (this.sprites && this.sprites.length > 0) {
+            this.sprites.forEach((sprite) => {
+                if (sprite) {
+                    sprite.rotation += this.speeds[count];
+                }
+                count++;
+            });
+        }
     }
 }

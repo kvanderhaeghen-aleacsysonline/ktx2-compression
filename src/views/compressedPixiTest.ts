@@ -11,16 +11,20 @@ export class CompressionPixiTest {
 
     private stage?: Pixi.Container = undefined;
     private compressedImage?: CompressedPixiKTX2 = undefined;
-
     private canvas?: HTMLCanvasElement;
 
+    private objectCount = 1; 
+
     private onDraw: () => void = this.draw.bind(this);
-    private onClick: () => Promise<void> = this.setup.bind(this);
+    private onClick: () => Promise<void> = this.addObjects.bind(this);
     private onResize: () => void = this.resize.bind(this);
 
     constructor() {
         this.createPixiRenderer();
         window.addEventListener('resize', this.onResize);
+
+        const countBtn = document.getElementById('count') as HTMLButtonElement;
+        countBtn.addEventListener('click', this.onClick);
 
         this.resize();
         this.setup();
@@ -35,6 +39,12 @@ export class CompressionPixiTest {
             view: this.canvas,
         });
         document.body.appendChild(this.canvas);
+    }
+
+    private async addObjects(): Promise<void> {
+        this.objectCount += 100;
+        await this.reload();
+        this.init();
     }
 
     private resize(): void {
@@ -77,7 +87,7 @@ export class CompressionPixiTest {
         this.createStage();
         this.compressedImage = new CompressedPixiKTX2(CompressionPixiTest.app!, this.stage!, false);
 
-        await this.compressedImage!.create(getKTX2Type());
+        await this.compressedImage!.create(this.objectCount, getKTX2Type());
         await this.createLogo();
 
         // requestAnimationFrame(this.onDraw);
@@ -135,6 +145,7 @@ export class CompressionPixiTest {
         CompressionPixiTest.app!.stage.destroy();
         CompressionPixiTest.app!.destroy();
         CompressionPixiTest.app = undefined;
+        this.objectCount = 1;
     }
 
     private removeTextureCache(): void {
