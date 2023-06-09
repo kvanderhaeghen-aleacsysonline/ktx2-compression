@@ -1,13 +1,15 @@
 import * as Three from 'three';
-import { Constants, KTX2Types } from '../constants/constants';
+import { Constants, ExtensionTypes, getOSToKTXType } from '../constants/constants';
 import _ from 'lodash';
 import { getOSType } from '../utils/getOSType';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
-import { CompressedThreeKTX2 } from '../models/compressedThreeKTX2';
 import { KTX2Loader } from 'three/examples/jsm/loaders/KTX2Loader';
+import { KTXLoader } from 'three/examples/jsm/loaders/KTXLoader';
 import { wait } from '../utils/wait';
-import { CompressedThreeModelKTX2 } from '../models/compressedThreeModelKTX2';
-import { getKTX2Type } from '../utils/getKTX2Type';
+import { CompressedThreeModels } from '../models/compressedThreeModels';
+import { getExtensionType, getKTX2Type } from '../utils/getKTX2Type';
+import { setLabelCount } from '../utils/labelTime';
+import { TextureData } from '../types/texturedata';
 
 export class CompressedThreeTest {
     private static renderer?: Three.WebGLRenderer;
@@ -16,15 +18,18 @@ export class CompressedThreeTest {
     private sceneOrtho?: Three.Scene;
     private sceneLight?: Three.DirectionalLight;
     private stage?: Three.Group;
-    private loader: Three.TextureLoader = new Three.TextureLoader();
-    // private compressedLoader: ThreeKTXLoader = new ThreeKTXLoader(this.loader.manager);
-    private ktx2Loader: KTX2Loader = new KTX2Loader(this.loader.manager);
-    private gltfLoader: GLTFLoader = new GLTFLoader(this.loader.manager);
-    private compressedImage?: CompressedThreeKTX2;
-    private compressedModel?: CompressedThreeModelKTX2;
+    private loader?: Three.TextureLoader;
+    private ktxLoader?: KTXLoader;
+    private ktx2Loader?: KTX2Loader;
+    private gltfLoader?: GLTFLoader;
+    private compressedModels?: CompressedThreeModels;
+
+    private objectCount = 1; 
+    private isKTX2 = false;
 
     private onDraw: () => void = this.draw.bind(this);
-    private onClick: () => Promise<void> = this.setup.bind(this);
+    // private onClick: () => Promise<void> = this.setup.bind(this);
+    private onClick: () => Promise<void> = this.addObjects.bind(this);
     private onResize: () => void = this.resize.bind(this);
 
     constructor() {
@@ -46,13 +51,17 @@ export class CompressedThreeTest {
         );
         CompressedThreeTest.cameraOrtho.position.z = 10;
         CompressedThreeTest.cameraOrtho.updateProjectionMatrix();
-
-        this.ktx2Loader.setTranscoderPath(window.location.origin + '/');
-        this.ktx2Loader.detectSupport(CompressedThreeTest.renderer);
         window.addEventListener('resize', this.onResize);
 
+        this.createLoaders();
         this.setup();
         this.resize();
+    }
+
+    private async addObjects(): Promise<void> {
+        this.objectCount += 100;
+        await this.reload();
+        this.init();
     }
 
     private resize(): void {
@@ -73,6 +82,19 @@ export class CompressedThreeTest {
         this.sceneOrtho.background = new Three.Color(0xc1c2c4);
         this.stage = new Three.Group();
         this.sceneOrtho.add(this.stage);
+
+        const countBtn = document.getElementById('count') as HTMLButtonElement;
+        countBtn.addEventListener('click', this.onClick);
+    }
+
+    private createLoaders(): void {
+        this.loader = new Three.TextureLoader();
+        this.ktxLoader = new KTXLoader(this.loader.manager);
+        this.ktx2Loader = new KTX2Loader(this.loader.manager);
+        this.gltfLoader = new GLTFLoader(this.loader.manager);
+
+        this.ktx2Loader.setTranscoderPath(window.location.origin + '/');
+        this.ktx2Loader.detectSupport(CompressedThreeTest.renderer!);
     }
 
     public init(): void {
@@ -81,6 +103,7 @@ export class CompressedThreeTest {
 
     public async reload(): Promise<void> {
         this.reset();
+        this.createLoaders();
         await wait(50);
         return this.setup();
     }
@@ -91,13 +114,19 @@ export class CompressedThreeTest {
 
     private async createSprites(): Promise<void> {
         this.createScene();
-        this.compressedImage = new CompressedThreeKTX2(this.stage!, this.ktx2Loader);
-        this.compressedModel = new CompressedThreeModelKTX2(this.stage!, this.ktx2Loader, this.gltfLoader);
 
-        await this.compressedImage!.create(getKTX2Type());
-        await this.compressedModel!.create(getKTX2Type(), 1);
+        this.compressedModels = new CompressedThreeModels(this.stage!, this.loader!, this.ktxLoader!, this.ktx2Loader!, this.gltfLoader!);
+        const extension = getExtensionType();
+        const type = extension === ExtensionTypes.KTX2 ? getKTX2Type() : getOSToKTXType(getOSType());
+        const data: TextureData = {
+            extension,
+            type,
+            objectCount: this.objectCount,
+        };
+        await this.compressedModels!.create(data);
+
         await this.createLogo();
-
+        setLabelCount(this.objectCount);
         // requestAnimationFrame(this.onDraw);
     }
 
@@ -105,7 +134,7 @@ export class CompressedThreeTest {
     private async createLogo(): Promise<void> {
         return new Promise<void>(async (resolve) => {
             const url = Constants.LOGO_LIST[1];
-            this.loader.load(
+            this.loader!.load(
                 url,
                 (tex) => {
                     const material = new Three.SpriteMaterial({ map: tex, color: 0xffffff, fog: false });
@@ -126,10 +155,9 @@ export class CompressedThreeTest {
     private draw(): void {
         if (!CompressedThreeTest.renderer || !CompressedThreeTest.cameraOrtho) return;
         if (!this.sceneOrtho || !this.stage) return;
-        if (!this.compressedImage || !this.compressedModel) return;
+        if (/*!this.compressedImage || */!this.compressedModels) return;
 
-        this.compressedImage!.update();
-        this.compressedModel!.update();
+        this.compressedModels!.update();
 
         CompressedThreeTest.renderer!.clear();
         CompressedThreeTest.renderer!.render(this.sceneOrtho, CompressedThreeTest.cameraOrtho!);
@@ -137,13 +165,23 @@ export class CompressedThreeTest {
     }
 
     private reset(): void {
-        if (this.compressedImage) {
-            this.compressedImage.reset();
-            this.compressedImage = undefined;
+        // if (this.compressedImage) {
+        //     this.compressedImage.reset();
+        //     this.compressedImage = undefined;
+        // }
+        if (this.compressedModels) {
+            this.compressedModels.reset();
+            this.compressedModels = undefined;
         }
-        if (this.compressedModel) {
-            this.compressedModel.reset();
-            this.compressedModel = undefined;
+        if (this.gltfLoader) {
+            this.gltfLoader = undefined;
+        }
+        if (this.loader) {
+            this.loader = undefined;
+        }
+        if (this.ktx2Loader) {
+            this.ktx2Loader.dispose();
+            this.ktx2Loader = undefined;
         }
         
         if (this.sceneOrtho) {
@@ -154,6 +192,9 @@ export class CompressedThreeTest {
             this.stage.clear();
             this.stage = undefined;
         }
+
+        const countBtn = document.getElementById('count') as HTMLButtonElement;
+        countBtn.removeEventListener('click', this.onClick);
     }
 
 

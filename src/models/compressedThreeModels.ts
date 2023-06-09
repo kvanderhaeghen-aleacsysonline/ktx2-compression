@@ -1,39 +1,77 @@
-import { Constants, KTX2Types } from '../constants/constants';
+import { Constants, ExtensionTypes, KTX2Types, KTXTypes } from '../constants/constants';
 import * as Three from 'three';
 import { GLTF, GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader';
 import _ from 'lodash';
 import * as SkeletonUtils from 'three/examples/jsm/utils/SkeletonUtils';
 import { KTX2Loader } from 'three/examples/jsm/loaders/KTX2Loader';
+import { KTXLoader } from 'three/examples/jsm/loaders/KTXLoader';
+import { LabelTypes, setLabelTime } from '../utils/labelTime';
+import { TextureData } from '../types/texturedata';
 
-export class CompressedThreeModelKTX2 {
-    private loader?: KTX2Loader;
+export class CompressedThreeModels {
+    private loader?: Three.TextureLoader;
+    private loaderKTX?: KTXLoader;
+    private loaderKTX2?: KTX2Loader;
     private gltfLoader: GLTFLoader;
     private stage: Three.Group;
-    private modelTexture?: Three.CompressedTexture;
+    private texture?: Three.Texture;
+    private compressedTexture?: Three.CompressedTexture;
     private modelGLTF?: GLTF;
     private models: any[] = [];
-    private textures: Three.CompressedTexture[] = [];
-    private modelCount = 1;
+    private textures: Three.CompressedTexture[] | Three.Texture [] = [];
+    private objectCount = 1;
 
-    constructor(stage: Three.Group, loader: KTX2Loader, gltfLoader: GLTFLoader) {
+    constructor(stage: Three.Group, loader: Three.TextureLoader, loaderKTX: KTXLoader, loaderKTX2: KTX2Loader, gltfLoader: GLTFLoader) {
         this.loader = loader;
+        this.loaderKTX = loaderKTX;
+        this.loaderKTX2 = loaderKTX2;
         this.gltfLoader = gltfLoader;
         this.stage = stage;
     }
 
-    public async create(type: KTX2Types, modelCount: number): Promise<void> {
+    public async create(data: TextureData): Promise<void> {
         return new Promise<void>(async (resolve) => {
-            this.modelCount = modelCount;
-            await new Promise<Three.CompressedTexture>(async (texResolve) => {
-                if (!this.modelTexture) {
-                    const url = Constants.MODEL_KTX2_LIST[type];
-                    console.log('Three Model - Loading KTX2.0 texture:', url);
-                    this.modelTexture = await this.loader!.loadAsync(url, this.getOnProgress.bind(this));
-                    if (this.modelTexture) {
-                        texResolve(this.modelTexture);
+            this.objectCount = data.objectCount;
+            await new Promise<Three.CompressedTexture | Three.Texture>(async (texResolve) => {
+                if (!this.compressedTexture && !this.texture) {
+                    let filename = Constants.getCompressedTexture(data.extension, data.type);
+                    console.log('Three Model - Loading', data.extension, 'texture:', filename);
+
+                    const startTime = Date.now();
+                    switch (data.extension) {
+                        case ExtensionTypes.PNG:
+                            this.texture = await this.loader!.loadAsync(filename, this.getOnProgress.bind(this));
+                            break;
+                        case ExtensionTypes.KTX:
+                            this.compressedTexture = await this.loaderKTX!.loadAsync(filename, this.getOnProgress.bind(this));
+                            break;
+                        case ExtensionTypes.KTX2:
+                            this.compressedTexture = await this.loaderKTX2!.loadAsync(filename, this.getOnProgress.bind(this));
+                            break;
+                        default:
+                            console.warn('Three cannot load this extension type.');
+                            return;
+                    }
+
+                    const endTime = Date.now();
+                    const difference = endTime - startTime;
+                    if(difference > 500 && data.extension === ExtensionTypes.KTX2) {
+                        setLabelTime(LabelTypes.Transcoding, difference);
+                    } else {
+                        setLabelTime(LabelTypes.Loading, difference);
+                    }
+                    
+                    if (this.texture) {
+                        texResolve(this.texture);
+                    } else if (this.compressedTexture) {
+                        texResolve(this.compressedTexture);
                     }
                 } else {
-                    texResolve(this.modelTexture);
+                    if (this.texture) {
+                        texResolve(this.texture);
+                    } else if (this.compressedTexture) {
+                        texResolve(this.compressedTexture);
+                    }
                     console.warn('Three.js Texture already exists!');
                 }
             });
@@ -53,9 +91,9 @@ export class CompressedThreeModelKTX2 {
     }
 
     private getOnCompleteHandler(
-        resolve: (value: Three.CompressedTexture | PromiseLike<Three.CompressedTexture>) => void
-    ): (obj: Three.CompressedTexture) => void {
-        return (texture: Three.CompressedTexture): void => {
+        resolve: (value: Three.CompressedTexture | PromiseLike<Three.CompressedTexture> | Three.Texture | PromiseLike<Three.Texture>) => void
+    ): (obj: Three.CompressedTexture | Three.Texture) => void {
+        return (texture: Three.CompressedTexture | Three.Texture): void => {
             resolve(texture);
         };
     }
@@ -77,17 +115,18 @@ export class CompressedThreeModelKTX2 {
     }
 
     private createModels(gltf: GLTF): void {
-        for (let i = 0; i < this.modelCount; i++) {
+        for (let i = 0; i < this.objectCount; i++) {
             const model = (SkeletonUtils as any).clone(gltf.scene);
             const mesh = model.children.find((v: Three.Object3D) => v.name === Constants.MESH_NAME) as Three.SkinnedMesh;
             const oldTex = (mesh.material as Three.MeshBasicMaterial).map!.clone();
-            const newTex = this.modelTexture!.clone();
+            const newTex = this.texture ? this.texture.clone() : this.compressedTexture!.clone();
             const material = new Three.MeshStandardMaterial({ map: newTex, fog: false });
             mesh.material = material;
             mesh.material.needsUpdate = true;
             oldTex?.dispose();
             this.models.push(model);
-            this.textures.push(newTex);
+            this.textures.push(newTex as any);
+            
 
             model.scale.set(100, 100, 100);
             model.position.set(_.random(-500, 500), _.random(-250, 250), -100);
@@ -99,7 +138,6 @@ export class CompressedThreeModelKTX2 {
 
     public reset(): void {
         if(this.textures) {
-            console.error(this.textures);
             this.textures.forEach((texture)=> {
                 texture.dispose();
             });
@@ -130,9 +168,9 @@ export class CompressedThreeModelKTX2 {
             });
             this.modelGLTF = undefined;
         }
-        if (this.modelTexture) {
-            this.modelTexture.dispose();
-            this.modelTexture = undefined;
+        if (this.compressedTexture) {
+            this.compressedTexture.dispose();
+            this.compressedTexture = undefined;
        }
     }
 

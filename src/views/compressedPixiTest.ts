@@ -1,19 +1,21 @@
 import * as Pixi from 'pixi.js';
-import { Constants } from '../constants/constants';
+import { Constants, ExtensionTypes, getOSToKTXType } from '../constants/constants';
 import { getOSType } from '../utils/getOSType';
-import { CompressedPixiKTX2 } from '../models/compressedPixiKTX2';
+import { CompressedPixiSprites } from '../models/compressedPixiSprites';
 import _ from 'lodash';
 import { wait } from '../utils/wait';
-import { getKTX2Type } from '../utils/getKTX2Type';
+import { getExtensionType, getKTX2Type } from '../utils/getKTX2Type';
+import { setLabelCount } from '../utils/labelTime';
+import { TextureData } from '../types/texturedata';
 
 export class CompressionPixiTest {
     private static app?: Pixi.Application;
 
     private stage?: Pixi.Container = undefined;
-    private compressedImage?: CompressedPixiKTX2 = undefined;
+    private compressedSprites?: CompressedPixiSprites = undefined;
     private canvas?: HTMLCanvasElement;
 
-    private objectCount = 1; 
+    private objectCount = 1;
 
     private onDraw: () => void = this.draw.bind(this);
     private onClick: () => Promise<void> = this.addObjects.bind(this);
@@ -22,9 +24,6 @@ export class CompressionPixiTest {
     constructor() {
         this.createPixiRenderer();
         window.addEventListener('resize', this.onResize);
-
-        const countBtn = document.getElementById('count') as HTMLButtonElement;
-        countBtn.addEventListener('click', this.onClick);
 
         this.resize();
         this.setup();
@@ -61,6 +60,9 @@ export class CompressionPixiTest {
         this.stage.interactive = true;
         this.stage.hitArea = new Pixi.Rectangle(0, 0, 1000, 1000);
         this.renderStage();
+
+        const countBtn = document.getElementById('count') as HTMLButtonElement;
+        countBtn.addEventListener('click', this.onClick);
     }
 
     private renderStage(): void {
@@ -74,7 +76,6 @@ export class CompressionPixiTest {
 
     public async reload(): Promise<void> {
         this.reset();
-        this.removeTextureCache();
         await wait(50);
         return this.setup();
     }
@@ -85,11 +86,19 @@ export class CompressionPixiTest {
 
     private async createSprites(): Promise<void> {
         this.createStage();
-        this.compressedImage = new CompressedPixiKTX2(CompressionPixiTest.app!, this.stage!, false);
 
-        await this.compressedImage!.create(this.objectCount, getKTX2Type());
+        this.compressedSprites = new CompressedPixiSprites(CompressionPixiTest.app!, this.stage!);
+        const extension = getExtensionType();
+        const type = extension === ExtensionTypes.KTX2 ? getKTX2Type() : getOSToKTXType(getOSType());
+        const data: TextureData = {
+            extension,
+            type,
+            objectCount: this.objectCount,
+        };
+        await this.compressedSprites!.create(data);
+
         await this.createLogo();
-
+        setLabelCount(this.objectCount);
         // requestAnimationFrame(this.onDraw);
     }
 
@@ -109,24 +118,28 @@ export class CompressionPixiTest {
     private draw(): void {
         if (!CompressionPixiTest.app || !CompressionPixiTest.app!.renderer) return;
         if (!this.stage) return;
-        if (!this.compressedImage) return;
+        if (!this.compressedSprites) return;
 
-        this.compressedImage!.update();
+        this.compressedSprites!.update();
         this.renderStage();
 
         requestAnimationFrame(this.onDraw);
     }
 
     private reset(): void {
-        if (this.compressedImage) {
-            this.compressedImage.reset();
-            this.compressedImage = undefined;
+        if (this.compressedSprites) {
+            this.compressedSprites.reset();
+            this.compressedSprites = undefined;
         }
         if (this.stage) {
             this.stage.removeChildren();
             this.stage.destroy();
             this.stage = undefined;
         }
+        this.removeTextureCache();
+
+        const countBtn = document.getElementById('count') as HTMLButtonElement;
+        countBtn.removeEventListener('click', this.onClick);
     }
 
     public destroy(): void {
@@ -140,8 +153,6 @@ export class CompressionPixiTest {
         };
         this.onResize = _.noop.bind(this);
 
-        this.removeTextureCache();
-
         CompressionPixiTest.app!.stage.destroy();
         CompressionPixiTest.app!.destroy();
         CompressionPixiTest.app = undefined;
@@ -149,11 +160,11 @@ export class CompressionPixiTest {
     }
 
     private removeTextureCache(): void {
-        for (var textureUrl in Pixi.utils.BaseTextureCache) {
-            delete Pixi.utils.BaseTextureCache[textureUrl];
-        }
         for (var textureUrl in Pixi.utils.TextureCache) {
-            delete Pixi.utils.TextureCache[textureUrl];
+            Pixi.utils.TextureCache[textureUrl].destroy();
+        }
+        for (var textureUrl in Pixi.utils.BaseTextureCache) {
+            Pixi.utils.BaseTextureCache[textureUrl].destroy();
         }
     }
 }

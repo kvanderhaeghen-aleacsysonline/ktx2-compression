@@ -1,6 +1,7 @@
-import { Constants } from './constants/constants';
+import { Constants, ExtensionTypes } from './constants/constants';
 import { CompressedThreeTest } from './views/compressedThreeTest';
 import { CompressionPixiTest } from './views/compressedPixiTest';
+import { getExtensionType } from './utils/getKTX2Type';
 
 export interface IGame {
     launch(idToChange: string, config: unknown): Promise<void>;
@@ -10,8 +11,10 @@ export interface IGame {
 export class Game implements IGame {
     private isPixi = true;
     private buttonRenderer?: HTMLButtonElement;
+    private buttonRefresh?: HTMLButtonElement;
 
     private onClickCompression: () => void = this.clickCompressionTest.bind(this);
+    private onReload: () => void = this.reload.bind(this);
 
     private threeTest: CompressedThreeTest | undefined = undefined;
     private pixiTest: CompressionPixiTest | undefined = undefined;
@@ -19,11 +22,29 @@ export class Game implements IGame {
     public launch(idToChange: string, config: unknown): Promise<void> {
         this.buttonRenderer = document.getElementById('swap') as HTMLButtonElement;
         this.buttonRenderer.innerText = this.isPixi ? Constants.PIXI_TEXT : Constants.THREE_TEXT;
-        const dropdown = document.querySelector(".dropdown")!;
-        dropdown.addEventListener('click', () => {
-            dropdown.classList.toggle("active");
+        this.buttonRefresh = document.getElementById('reload') as HTMLButtonElement;
+
+       
+
+        const compressionDropdown = document.getElementById("compression")! as HTMLSelectElement;
+        compressionDropdown.addEventListener('click', () => {
+            compressionDropdown.classList.toggle("active");
         });
+
+        const extensionDropdown = document.getElementById("extension")! as HTMLSelectElement;
+        extensionDropdown.addEventListener('click', () => {
+            extensionDropdown.classList.toggle("active");
+            this.checkExtension(compressionDropdown);
+        });
+
+        this.checkExtension(compressionDropdown);
         return this.compressionTest();
+    }
+
+    private checkExtension(element: HTMLSelectElement): void {
+        const extension = getExtensionType();
+        if (extension !== ExtensionTypes.KTX2) element.disabled = true;
+        else element.disabled = false;
     }
 
     public async reload(): Promise<void> {
@@ -46,6 +67,7 @@ export class Game implements IGame {
             this.threeTest!.init();
         }
         this.buttonRenderer!.addEventListener('click', this.onClickCompression);
+        this.buttonRefresh!.addEventListener('click', this.onReload);
         return Promise.resolve();
     }
 

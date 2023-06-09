@@ -2,8 +2,9 @@ import { Constants, KTX2Types } from '../constants/constants';
 import * as Three from 'three';
 import _ from 'lodash';
 import { KTX2Loader } from 'three/examples/jsm/loaders/KTX2Loader';
+import { LabelTypes, setLabelTime } from '../utils/labelTime';
 
-export class CompressedThreeKTX2 {
+export class CompressedThreeSprites {
     private loader?: KTX2Loader;
     private stage: Three.Group;
     private texture?: Three.Texture;
@@ -21,8 +22,18 @@ export class CompressedThreeKTX2 {
                 if (!this.texture) {
                     const url = Constants.MODEL_KTX2_LIST[type];
                     console.log('Three - Loading compressed texture:', url);
+                    
+                    const startTime = Date.now();
                     this.texture = await this.loader!.loadAsync(url, this.getOnProgress.bind(this));
-                    console.error(this.texture);
+                
+                    const endTime = Date.now();
+                    const difference = endTime - startTime;
+                    if(difference > 500) {
+                        setLabelTime(LabelTypes.Transcoding, difference);
+                    } else {
+                        setLabelTime(LabelTypes.Loading, difference);
+                    }
+
                     if (this.texture) {
                         texResolve(this.texture);
                     }
@@ -42,7 +53,6 @@ export class CompressedThreeKTX2 {
     private createSprites(texture: Three.Texture): void {
         const material = new Three.SpriteMaterial({ map: texture, color: 0xffffff });
         const sprite = new Three.Sprite(material);
-        console.error(sprite);
 
         sprite.center.set(0.5, 0.5);
         sprite.scale.set(500, 500, 500);
@@ -65,6 +75,10 @@ export class CompressedThreeKTX2 {
         for (let i = 0; i < this.sprites.length; i++) {
             this.sprites[i]?.material?.dispose();
             this.sprites[i]?.clear();
+        }
+        if(this.texture) {
+            this.texture.dispose();
+            this.texture = undefined;
         }
         this.sprites = [];
         this.speeds = [];

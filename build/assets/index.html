@@ -34,7 +34,19 @@
             vertical-align: middle;
         }
 
+        input {
+            font-size: 20px;
+            /* min-width: 300px; */
+            height: 30px;
+            vertical-align: middle;
+        }
         textarea {
+            font-size: 20px;
+            text-align: center;
+            height: 30px;
+            vertical-align: middle;
+        }
+        label {
             font-size: 20px;
             text-align: center;
             height: 30px;
@@ -134,25 +146,38 @@
     <body>
         <br></br>
         <div>
-            <button id="swap"> Swap renderer </button>
-            <button id="count"> Add 100 objects </button>
+            <button id="swap">Swap renderer</button>
+            <button id="count">Add 100 objects</button>
         </div>
-        <br></br>
-        <div class="dropdown">
-            <input class="text-box" type="text" value="etc1s" readonly>
-            <div class="options">
-              <div onclick="show('etc1s')">etc1s</div>
-              <div onclick="show('uastc')">uastc</div>
-              <div onclick="show('astc-4x4')">astc-4x4</div>
-              <div onclick="show('astc-6x6')">astc-6x6</div>
-              <div onclick="show('astc-8x8')">astc-8x8</div>
-              <div onclick="show('astc-12x12')">astc-12x12</div>
+        <div style="height: 10px"></div>
+        <div>
+            <button id="reload"> Reload </button>
+        </div>
+        <div style="height: 10px"></div>
+        <div>
+            <div>
+                <label for="extensions">Choose extension:</label>
+                <select name="extensions" id="extension">
+                    <option value="png">png</option>
+                    <option value="ktx">ktx</option>
+                    <option value="basis">basis</option>
+                    <option value="ktx2">ktx2</option>
+                </select>
+                <label>  |  </label>
+                <label for="compressions">Choose compression:</label>
+                <select name="compressions" id="compression">
+                    <option value="etc1s">etc1s</option>
+                    <option value="uastc">uastc</option>
+                </select>
             </div>
         </div>
-    
-        <br></br>
-
-        <br></br>
+        <div style="height: 10px"></div>
+        <div>
+            <label id="transcode"></label>
+            <label> | </label>
+            <label id="objects"></label>
+        </div>
+        <div style="height: 10px"></div>
         <script src="./testGame.js"></script>
         <div id="gameContainer">
             <div id="gameDiv"></div>
@@ -162,7 +187,6 @@
             TestGame.launch('game', {
                 locale: 'en-GB',
                 assetRoot: window.location.origin + '/assets/',
-                // assetRoot: '10.60.0.152:8080/' + '/assets/',
             });
             function show(value) {
                 document.querySelector(".text-box").value = value;

@@ -1,16 +1,16 @@
-export enum OSType {
+export enum OSTypes {
     na = '',
     windows = 'dxt',
     apple = 'pvrtc',
     android = 'etc1',
 }
 
-export function osTypeToString(s: OSType): string {
-    const states: Record<OSType, string> = {
-        [OSType.na]: 'na',
-        [OSType.windows]: 'windows',
-        [OSType.apple]: 'apple',
-        [OSType.android]: 'android',
+export function osTypeToString(s: OSTypes): string {
+    const states: Record<OSTypes, string> = {
+        [OSTypes.na]: 'na',
+        [OSTypes.windows]: 'windows',
+        [OSTypes.apple]: 'apple',
+        [OSTypes.android]: 'android',
     };
     return states[s];
 }
