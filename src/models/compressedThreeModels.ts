@@ -41,6 +41,8 @@ export class CompressedThreeModels {
                     switch (data.extension) {
                         case ExtensionTypes.PNG:
                             this.texture = await this.loader!.loadAsync(filename, this.getOnProgress.bind(this));
+                            this.texture.encoding = Three.sRGBEncoding;
+	                        this.texture.flipY = false;
                             break;
                         case ExtensionTypes.KTX:
                             this.compressedTexture = await this.loaderKTX!.loadAsync(filename, this.getOnProgress.bind(this));
