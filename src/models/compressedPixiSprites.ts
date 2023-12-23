@@ -1,7 +1,6 @@
 import { Constants, ExtensionTypes } from '../constants/constants';
 import * as Pixi from 'pixi.js';
 import _ from 'lodash';
-import { Assets } from 'pixi.js';
 import { BasisParser, KTX2Parser } from 'pixi-basis-ktx2';
 // import { BasisParser, KTX2Parser } from '@pixi/basis';
 import { LabelTypes, setLabelTime } from '../utils/labelTime';
@@ -31,7 +30,7 @@ export class CompressedPixiSprites {
         console.log('Pixi - Loading compressed', data.extension, 'texture:', this.fileName);
 
         const startTime = Date.now();
-        const texture = (await Assets.load(this.fileName)) as Pixi.Texture;
+        const texture = (await Pixi.Assets.load(this.fileName)) as Pixi.Texture;
         this.baseTexture = texture.baseTexture;
 
         const endTime = Date.now();
