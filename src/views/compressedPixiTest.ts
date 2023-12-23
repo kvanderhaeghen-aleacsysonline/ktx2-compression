@@ -7,6 +7,7 @@ import { wait } from '../utils/wait';
 import { getExtensionType, getKTX2Type } from '../utils/getKTX2Type';
 import { setLabelCount } from '../utils/labelTime';
 import { TextureData } from '../types/texturedata';
+import { loadBasis, loadKTX2 } from 'pixi-basis-ktx2';
 
 export class CompressionPixiTest {
     private static app?: Pixi.Application;
@@ -22,6 +23,10 @@ export class CompressionPixiTest {
     private onResize: () => void = this.resize.bind(this);
 
     constructor() {
+        // Use with pixi-basis-ktx2
+        Pixi.Assets.loader.parsers.push(loadBasis);
+        Pixi.Assets.loader.parsers.push(loadKTX2);
+
         this.createPixiRenderer();
         window.addEventListener('resize', this.onResize);
 

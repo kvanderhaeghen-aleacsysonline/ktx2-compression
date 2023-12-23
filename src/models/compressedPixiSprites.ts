@@ -2,9 +2,8 @@ import { Constants, ExtensionTypes } from '../constants/constants';
 import * as Pixi from 'pixi.js';
 import _ from 'lodash';
 import { Assets } from 'pixi.js';
-// import { BasisParser, KTX2Parser } from 'pixi-basis-ktx2';
-// import { BasisParser } from '@pixi/basis';
-import { BasisParser, KTX2Parser } from '@pixi/basis';
+import { BasisParser, KTX2Parser } from 'pixi-basis-ktx2';
+// import { BasisParser, KTX2Parser } from '@pixi/basis';
 import { LabelTypes, setLabelTime } from '../utils/labelTime';
 import { TextureData } from '../types/texturedata';
 
