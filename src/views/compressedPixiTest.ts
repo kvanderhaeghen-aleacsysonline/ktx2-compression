@@ -11,8 +11,8 @@ import { TextureData } from '../types/texturedata';
 export class CompressionPixiTest {
     private static app?: Pixi.Application;
 
-    private stage?: Pixi.Container = undefined;
-    private compressedSprites?: CompressedPixiSprites = undefined;
+    private stage?: Pixi.Container;
+    private compressedSprites?: CompressedPixiSprites;
     private canvas?: HTMLCanvasElement;
 
     private objectCount = 1;
@@ -112,7 +112,7 @@ export class CompressionPixiTest {
         logo.anchor.set(0, 0);
         logo.scale.set(0.5, 0.5);
         logo.position.set(10, -30);
-        this.stage!.addChild(logo);
+        this.stage?.addChild(logo);
     }
 
     private draw(): void {
@@ -153,8 +153,8 @@ export class CompressionPixiTest {
         };
         this.onResize = _.noop.bind(this);
 
-        CompressionPixiTest.app!.stage.destroy();
-        CompressionPixiTest.app!.destroy();
+        CompressionPixiTest.app?.stage.destroy();
+        CompressionPixiTest.app?.destroy();
         CompressionPixiTest.app = undefined;
         this.objectCount = 1;
     }

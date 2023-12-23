@@ -1,9 +1,10 @@
-import { Constants, ExtensionTypes, KTX2Types } from '../constants/constants';
+import { Constants, ExtensionTypes } from '../constants/constants';
 import * as Pixi from 'pixi.js';
 import _ from 'lodash';
 import { Assets } from 'pixi.js';
-import { BasisParser } from '@pixi/basis';
-import { KTX2Parser } from '@pixi/ktx2';
+// import { BasisParser, KTX2Parser } from 'pixi-basis-ktx2';
+// import { BasisParser } from '@pixi/basis';
+import { BasisParser, KTX2Parser } from '@pixi/basis';
 import { LabelTypes, setLabelTime } from '../utils/labelTime';
 import { TextureData } from '../types/texturedata';
 
@@ -13,6 +14,7 @@ export class CompressedPixiSprites {
     private sprites: Pixi.Sprite[] = [];
     private speeds: number[] = [];
     private baseTexture?: Pixi.BaseTexture;
+    private fileName = '';
 
     constructor(app: Pixi.Application, stage: Pixi.Container) {
         this.app = app;
@@ -26,11 +28,11 @@ export class CompressedPixiSprites {
             await BasisParser.loadTranscoder(window.location.origin + '/basis_transcoder.js', window.location.origin + '/basis_transcoder.wasm');
         }
 
-        let filename = Constants.getCompressedTexture(data.extension, data.type);
-        console.log('Pixi - Loading compressed', data.extension, 'texture:', filename);
+        this.fileName = Constants.getCompressedTexture(data.extension, data.type);
+        console.log('Pixi - Loading compressed', data.extension, 'texture:', this.fileName);
 
         const startTime = Date.now();
-        const texture = (await Assets.load(filename)) as Pixi.Texture;
+        const texture = (await Assets.load(this.fileName)) as Pixi.Texture;
         this.baseTexture = texture.baseTexture;
 
         const endTime = Date.now();
@@ -67,7 +69,7 @@ export class CompressedPixiSprites {
         }
         if(this.baseTexture) {
             Pixi.BaseTexture.removeFromCache(this.baseTexture);
-            this.baseTexture.destroy();
+            Pixi.Assets.unload(this.fileName);
             this.baseTexture = undefined;
         }
         this.sprites = [];
