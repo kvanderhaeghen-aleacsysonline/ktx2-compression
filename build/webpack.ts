@@ -58,7 +58,7 @@ const config: Webpack.Configuration = {
     },
     devServer: {
         host: myNetworkAddress,
-        port: 8080,
+        port: 8081,
         inline: true,
         open: true,
         overlay: true,
@@ -77,7 +77,8 @@ const config: Webpack.Configuration = {
         new CopyPlugin({
             patterns: [
                 { from: Path.join(__dirname, '..', 'assets'), to: Path.join(Config.outPath, 'assets') },
-                { from: Path.join(__dirname, '..', 'transcoder/build/'), to: Path.join(Config.outPath, '') },
+                // { from: Path.join(__dirname, '..', 'transcoder/build/'), to: Path.join(Config.outPath, '') },
+                { from: Path.join(__dirname, '..', 'node_modules/pixi-basis-ktx2/assets/'), to: Path.join(Config.outPath, '') },
             ],
         }),
         new nodePolyfillPlugin(),
